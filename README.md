@@ -9,7 +9,7 @@ BloodLine is a mobile application developed to streamline the blood donation pro
 ### Binary Packages
 To begin your journey as a donor or requester, navigate to the Releases section and select the package for your device:
 
-* **Android:** [📥 Download BloodLine_v1.0.0_arm64.apk](https://github.com/Screwen/Blood-Donation-App/releases/download/v1.0.0/app-release.apk) 📱
+* **Android:** [📥 Download BloodLine_v1.0.0.apk](https://github.com/Screwen/Blood-Donation-App/releases/download/v1.0.0/app-release.apk) 📱
 
 
 ### Execution Steps
