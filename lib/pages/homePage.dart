@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cse_project/auth/auth.dart';
+import 'package:cse_project/northifiacation/northification_service.dart';
 import 'package:cse_project/pages/MyProfilePage.dart';
 import 'package:cse_project/pages/chats.dart';
 import 'package:cse_project/pages/find_donor_page.dart';
@@ -14,6 +15,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // Track when the user last cleared notifications
+  Timestamp lastCheckedTime = Timestamp.now();
+
   //current user logged in
   final currentuser = FirebaseAuth.instance.currentUser!;
 
@@ -24,6 +28,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+
+    // 1. Ask for permission
+    NotificationService().requestPermissions();
+
+    // 2. Start the blood request listener
+    NotificationService().startListening(currentuser.email!);
 
     //fetch username from firebase
     FirebaseFirestore.instance
@@ -41,6 +51,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   //sign user out
   void signOut() async {
+    // Stop the listener first
+    NotificationService().stopListening();
+
     await FirebaseAuth.instance.signOut();
     Navigator.pushReplacement(
       context,
@@ -89,7 +102,56 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: Colors.white,
                               ),
                             ),
+
                             CircleAvatar(
+                              backgroundColor: Colors.white24,
+                              child: StreamBuilder<QuerySnapshot>(
+                                // 1. Listen for posts newer than lastCheckedTime and NOT from the current user
+                                stream: FirebaseFirestore.instance
+                                    .collection('User Posts')
+                                    .where(
+                                      'TimeStamp',
+                                      isGreaterThan: lastCheckedTime,
+                                    )
+                                    .snapshots(),
+                                builder: (context, snapshot) {
+                                  // 2. Count the docs (excluding our own)
+                                  int unreadCount = 0;
+                                  if (snapshot.hasData) {
+                                    unreadCount = snapshot.data!.docs
+                                        .where(
+                                          (doc) =>
+                                              doc['UserEmail'] !=
+                                              currentuser.email,
+                                        )
+                                        .length;
+                                  }
+
+                                  // 3. Wrap IconButton with Badge
+                                  return Badge(
+                                    isLabelVisible: unreadCount > 0,
+                                    label: Text(unreadCount.toString()),
+                                    backgroundColor: Colors.red,
+                                    child: IconButton(
+                                      icon: const Icon(
+                                        Icons.notifications,
+                                        color: Colors.white,
+                                      ),
+                                      onPressed: () {
+                                        // 4. When clicked, reset the count to 0
+                                        setState(() {
+                                          lastCheckedTime = Timestamp.now();
+                                        });
+
+                                        // Optional: Navigate to your requests/notifications page here
+                                        // Navigator.push(...);
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            /*CircleAvatar(
                               backgroundColor: Colors.white24,
                               //icon buttton(does nothing for now)
                               child: IconButton(
@@ -99,7 +161,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 onPressed: () {},
                               ),
-                            ), // IconButton
+                            ),*/
+                            // IconButton
                           ],
                         ),
                         SizedBox(height: 8),
