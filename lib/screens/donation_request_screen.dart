@@ -37,6 +37,13 @@ class _DonationRequestScreenState extends State<DonationRequestScreen> {
           'TimeStamp': Timestamp.now(),
         });
 
+        // Increment the lifetime counter in 'GlobalStats'
+        // This ensures the counter ONLY increases, even if you delete posts later.
+        await FirebaseFirestore.instance
+            .collection('GlobalStats')
+            .doc('counters')
+            .update({'total_requests': FieldValue.increment(1)});
+
         //clear the textfield
         amount_controller.clear();
         Location_controller.clear();
@@ -75,7 +82,7 @@ class _DonationRequestScreenState extends State<DonationRequestScreen> {
   //for blood group
   String? selectedBloodGroup;
   final _formKey = GlobalKey<FormState>();
-  
+
   //additinal notes
   final TextEditingController _notesController = TextEditingController();
   //list of bloodtypes
@@ -281,7 +288,7 @@ class _DonationRequestScreenState extends State<DonationRequestScreen> {
         ],
       ),
 
-      //sumbit button 
+      //sumbit button
       bottomNavigationBar: Container(
         margin: EdgeInsets.all(16),
         child: ElevatedButton(

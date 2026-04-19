@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cse_project/utills/donation_helper.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:flutter/material.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -12,7 +14,7 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   StreamSubscription<QuerySnapshot>? _requestSub;
 
-  // 1. Initialize the system
+  //  Initialize the system
   Future<void> init() async {
     tz.initializeTimeZones();
 
@@ -28,13 +30,28 @@ class NotificationService {
     await _plugin.initialize(
       settings: initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // This runs when a user taps the notification
-        print("Notification tapped: ${response.payload}");
+        debugPrint("Notification tapped: ${response.payload}");
       },
     );
   }
 
-  // 2. Request Popup Permission (Required for Android 13+)
+  // COMPATIBILITY LOGIC
+  bool _isCompatible(String donor, String requester) {
+    if (donor == requester) return true;
+    if (donor == 'O-') return true;
+    const map = {
+      'O+': ['O+', 'A+', 'B+', 'AB+'],
+      'A+': ['A+', 'AB+'],
+      'A-': ['A+', 'A-', 'AB+', 'AB-'],
+      'B+': ['B+', 'AB+'],
+      'B-': ['B+', 'B-', 'AB+', 'AB-'],
+      'AB-': ['AB+', 'AB-'],
+      'AB+': ['AB+'],
+    };
+    return map[donor]?.contains(requester) ?? false;
+  }
+
+  // 2. Request Popup Permission
   Future<void> requestPermissions() async {
     final androidImpl = _plugin
         .resolvePlatformSpecificImplementation<
@@ -43,11 +60,15 @@ class NotificationService {
     await androidImpl?.requestNotificationsPermission();
   }
 
-  // 3. The Listener (Wires up to your "User Posts" database)
-  void startListening(String currentUserEmail) {
-    _requestSub?.cancel(); // Clear existing listener if any
+  //  Listener
+  // 1. Updated Listener to include eligibility check
+  void startListening(
+    String currentUserEmail,
+    String userBloodGroup,
+    Timestamp? lastDonationDate,
+  ) {
+    _requestSub?.cancel();
 
-    // We only notify for posts created AFTER the app was opened
     final DateTime sessionStart = DateTime.now();
 
     _requestSub = FirebaseFirestore.instance
@@ -55,37 +76,50 @@ class NotificationService {
         .snapshots()
         .listen((snapshot) {
           for (var change in snapshot.docChanges) {
-            // Trigger only for NEW documents added to Firestore
             if (change.type == DocumentChangeType.added) {
               final data = change.doc.data() as Map<String, dynamic>;
 
               final String requesterEmail = data['UserEmail'] ?? '';
-              final String bloodGroup = data['BloodGroup'] ?? 'Unknown';
-              final Timestamp? time = data['TimeStamp'] as Timestamp?;
+              final String neededGroup = data['BloodGroup'] ?? 'Unknown';
+              final Timestamp? postTime = data['TimeStamp'] as Timestamp?;
 
-              // Logic: Don't notify me about my own posts
-              if (requesterEmail != currentUserEmail &&
-                  time != null &&
-                  time.toDate().isAfter(sessionStart)) {
-                _showPopup(
-                  '🩸 Blood Required: $bloodGroup',
-                  'New request at ${data['Location'] ?? 'a nearby hospital'}.',
+              // logic check
+              bool isNewPost =
+                  postTime != null && postTime.toDate().isAfter(sessionStart);
+              bool isNotMe = requesterEmail != currentUserEmail;
+
+              if (isNewPost && isNotMe) {
+                // CHECK 1: Blood Compatibility
+                bool bloodMatches = _isCompatible(userBloodGroup, neededGroup);
+
+                // CHECK 2: Donation Eligibility (120 days rule)
+                bool userIsEligible = DonationHelper.isEligible(
+                  lastDonationDate,
                 );
+
+                if (bloodMatches && userIsEligible) {
+                  _showPopup(
+                    '🩸 Urgent Match Found!',
+                    'A $neededGroup request was posted. You are eligible to donate!',
+                  );
+                }
               }
             }
           }
         });
   }
 
-  // 4. The actual Popup logic
+  //  Popup logic
+
   Future<void> _showPopup(String title, String body) async {
     const androidDetails = AndroidNotificationDetails(
       'blood_link_channel',
       'Blood Requests',
-      channelDescription: 'Notifications for new blood donation requests',
+      channelDescription: 'Notifications for compatible blood requests',
       importance: Importance.max,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',
+      color: Color(0xFFE53935),
     );
 
     await _plugin.show(
@@ -96,8 +130,10 @@ class NotificationService {
     );
   }
 
-  // Stop listening (use when logging out)
+  // stop listening
   void stopListening() {
     _requestSub?.cancel();
+    _requestSub = null; // Clean up the reference
+    debugPrint("Notification listener stopped.");
   }
 }

@@ -118,6 +118,7 @@ class _RegisterPageState extends State<RegisterPage> {
             'blood_group': selectedbloodtype,
             'location': selectedLocation,
             'number': contact_numberTextcontroller.text,
+            'last_donation_date': Timestamp.fromDate(DateTime(2000)),
           });
 
       //pop loading screen
@@ -145,6 +146,7 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: Colors.grey[300],
       body: Container(
         width: double.infinity,
@@ -158,187 +160,207 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
 
         child: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 25.0),
-              child: Form(
-                key: _formkey,
-                child: SingleChildScrollView(
-                  physics: BouncingScrollPhysics(),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      //logo
-                      Icon(
-                        Icons.lock,
-                        size: 100,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                      const SizedBox(height: 50),
-                      //welcome back message
-                      const Text(
-                        "Let's Create An Account For You",
-                        style: TextStyle(fontSize: 16, color: Colors.white),
-                      ),
-                      const SizedBox(height: 25),
-
-                      //email textfield
-                      MyTextField(
-                        controller: emailTextcontroller,
-                        hintText: 'Email',
-                        obscureText: false,
-                        maxlength: 50,
-                        validateText: 'Email',
-                      ),
-                      const SizedBox(height: 10),
-
-                      //password textfield
-                      MyTextField(
-                        controller: passwordTextcontroller,
-                        hintText: 'Password',
-                        obscureText: true,
-                        maxlength: 32,
-                        validateText: 'Password',
-                      ),
-                      const SizedBox(height: 10),
-
-                      //confirm password textfield
-                      MyTextField(
-                        controller: confirmPasswordController,
-                        hintText: 'Confirm Password',
-                        obscureText: true,
-                        maxlength: 32,
-                        validateText: 'Confirm Password',
-                      ),
-                      const SizedBox(height: 10),
-
-                      //username
-                      MyTextField(
-                        controller: usernameTextcontroller,
-                        hintText: 'Username',
-                        obscureText: false,
-                        maxlength: 10,
-                        validateText: 'Username',
-                      ),
-                      const SizedBox(height: 10),
-
-                      //bloodtype dropdown
-                      DropdownButtonFormField(
-                        value: selectedbloodtype,
-                        decoration: InputDecoration(
-                          labelText: 'Select Bloodtype',
-                          labelStyle: TextStyle(color: Colors.white),
-                          prefixIcon: Icon(
-                            Icons.location_on,
-                            color: Colors.white,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.white),
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.white),
-                          ),
-                        ),
-                        dropdownColor: Color(0xFFFF8A80),
-
-                        style: TextStyle(color: Colors.white),
-                        items: bloodTypes.map((bloodtype) {
-                          return DropdownMenuItem(
-                            value: bloodtype,
-                            child: Text(bloodtype),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedbloodtype = value;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 10),
-
-                      //location dropdown
-                      DropdownButtonFormField(
-                        value: selectedLocation,
-                        decoration: InputDecoration(
-                          labelText: 'Select Location',
-                          labelStyle: TextStyle(color: Colors.white),
-                          prefixIcon: Icon(
-                            Icons.location_on,
-                            color: Colors.white,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.white),
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.white),
-                          ),
-                        ),
-                        dropdownColor: Color(0xFFFF8A80),
-                        style: TextStyle(color: Colors.white),
-                        items: locations.map((location) {
-                          return DropdownMenuItem(
-                            value: location,
-                            child: Text(location),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedLocation = value;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 10),
-
-                      //for contact number
-                      MyTextField(
-                        controller: contact_numberTextcontroller,
-                        hintText: 'Contact Number',
-                        obscureText: false,
-                        maxlength: 15,
-                        validateText: 'Contact Number',
-                      ),
-                      const SizedBox(height: 10),
-
-                      //sign in button
-                      isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : MyButton(onTab: signup, text: 'Sign up'),
-                      const SizedBox(height: 25),
-
-                      //go to register page
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            "Already have an account?",
-                            style: TextStyle(
-                              fontSize: 16,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: ConstrainedBox(
+                  // This ensures the content stays centered if there's room,
+                  // but allows scrolling if the keyboard is open.
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 25.0),
+                      child: Form(
+                        key: _formkey,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(height: 30), // Smaller top gap
+                            // Logo
+                            Icon(
+                              Icons.lock,
+                              size: 80, // Smaller logo to save space
                               color: Colors.white.withOpacity(0.9),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          GestureDetector(
-                            onTap: widget.onTab,
-                            child: Text(
-                              "Login now",
+                            const SizedBox(height: 20),
+                            //welcome back message
+                            const Text(
+                              "Let's Create An Account For You",
                               style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: const Color.fromARGB(255, 33, 149, 243),
+                                fontSize: 16,
+                                color: Colors.white,
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 25),
+
+                            //email textfield
+                            MyTextField(
+                              controller: emailTextcontroller,
+                              hintText: 'Email',
+                              obscureText: false,
+                              maxlength: 50,
+                              validateText: 'Email',
+                            ),
+                            const SizedBox(height: 10),
+
+                            //password textfield
+                            MyTextField(
+                              controller: passwordTextcontroller,
+                              hintText: 'Password',
+                              obscureText: true,
+                              maxlength: 32,
+                              validateText: 'Password',
+                            ),
+                            const SizedBox(height: 10),
+
+                            //confirm password textfield
+                            MyTextField(
+                              controller: confirmPasswordController,
+                              hintText: 'Confirm Password',
+                              obscureText: true,
+                              maxlength: 32,
+                              validateText: 'Confirm Password',
+                            ),
+                            const SizedBox(height: 10),
+
+                            //username
+                            MyTextField(
+                              controller: usernameTextcontroller,
+                              hintText: 'Username',
+                              obscureText: false,
+                              maxlength: 10,
+                              validateText: 'Username',
+                            ),
+                            const SizedBox(height: 10),
+
+                            //bloodtype dropdown
+                            DropdownButtonFormField(
+                              value: selectedbloodtype,
+                              decoration: InputDecoration(
+                                labelText: 'Select Bloodtype',
+                                labelStyle: TextStyle(color: Colors.white),
+                                prefixIcon: Icon(
+                                  Icons.location_on,
+                                  color: Colors.white,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: Colors.white),
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: Colors.white),
+                                ),
+                              ),
+                              dropdownColor: Color(0xFFFF8A80),
+
+                              style: TextStyle(color: Colors.white),
+                              items: bloodTypes.map((bloodtype) {
+                                return DropdownMenuItem(
+                                  value: bloodtype,
+                                  child: Text(bloodtype),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedbloodtype = value;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 10),
+
+                            //location dropdown
+                            DropdownButtonFormField(
+                              value: selectedLocation,
+                              decoration: InputDecoration(
+                                labelText: 'Select Location',
+                                labelStyle: TextStyle(color: Colors.white),
+                                prefixIcon: Icon(
+                                  Icons.location_on,
+                                  color: Colors.white,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: Colors.white),
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: Colors.white),
+                                ),
+                              ),
+                              dropdownColor: Color(0xFFFF8A80),
+                              style: TextStyle(color: Colors.white),
+                              items: locations.map((location) {
+                                return DropdownMenuItem(
+                                  value: location,
+                                  child: Text(location),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedLocation = value;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 10),
+
+                            //for contact number
+                            MyTextField(
+                              controller: contact_numberTextcontroller,
+                              hintText: 'Contact Number',
+                              obscureText: false,
+                              maxlength: 15,
+                              validateText: 'Contact Number',
+                            ),
+                            const SizedBox(height: 10),
+
+                            //sign in button
+                            isLoading
+                                ? const CircularProgressIndicator(
+                                    color: Colors.white,
+                                  )
+                                : MyButton(onTab: signup, text: 'Sign up'),
+                            const SizedBox(height: 25),
+
+                            //go to register page
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "Already have an account?",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white.withOpacity(0.9),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                GestureDetector(
+                                  onTap: widget.onTab,
+                                  child: Text(
+                                    "Login now",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color.fromARGB(
+                                        255,
+                                        33,
+                                        149,
+                                        243,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 25),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 25),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),

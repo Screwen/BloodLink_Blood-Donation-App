@@ -13,7 +13,6 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
-
   //go to home page
   void goToHomePAge() {
     //go to profile
@@ -78,7 +77,7 @@ class _DashboardState extends State<Dashboard> {
               ),
             ),
           ),
-          
+
           //dashcards/user info
           SliverFillRemaining(
             child: StreamBuilder(
@@ -107,9 +106,22 @@ class _DashboardState extends State<Dashboard> {
                       final email = user["email"];
                       final number = user["number"];
 
+                      final dynamic rawDate = user["last_donation_date"];
+                      final Timestamp? lastDonationDate = rawDate is Timestamp
+                          ? rawDate
+                          : null;
+
+                      // Inside Dashboard.dart -> ListView.builder
                       return Padding(
                         padding: const EdgeInsets.all(8.0),
-                        child: Dashcards(name: email, number: number),
+
+                        child: Dashcards(
+                          name: email,
+                          number: number,
+                          donorEmail: email,
+                          lastDonationDate: lastDonationDate,
+                          postID: widget.postID,
+                        ),
                       );
                     },
                   );
@@ -120,7 +132,5 @@ class _DashboardState extends State<Dashboard> {
         ],
       ),
     );
-
-   
   }
 }

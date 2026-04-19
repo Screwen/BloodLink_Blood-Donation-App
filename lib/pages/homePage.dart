@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cse_project/auth/auth.dart';
-import 'package:cse_project/northifiacation/northification_service.dart';
+import 'package:cse_project/utills/northification_service.dart';
 import 'package:cse_project/pages/MyProfilePage.dart';
 import 'package:cse_project/pages/chats.dart';
 import 'package:cse_project/pages/find_donor_page.dart';
@@ -29,22 +29,36 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
 
-    // 1. Ask for permission
     NotificationService().requestPermissions();
 
-    // 2. Start the blood request listener
-    NotificationService().startListening(currentuser.email!);
-
-    //fetch username from firebase
+    // Listen to User Data
     FirebaseFirestore.instance
         .collection("Users")
-        .doc(currentuser.email)
+        .doc(
+          currentuser.email,
+        ) // Make sure this is email or uid based on your DB
         .snapshots()
+        // Inside HomeScreen's initState listener:
         .listen((doc) {
-          if (doc.exists) {
+          if (doc.exists && doc.data() != null) {
+            final data = doc.data()!;
+            final String myBloodGroup = data["blood_group"] ?? '';
+            final String fetchedUsername = data["username"] ?? '';
+
+            // FETCH THE DATE HERE
+            final Timestamp? lastDonation = data["last_donation_date"];
+
             setState(() {
-              username = doc["username"] ?? '';
+              username = fetchedUsername;
             });
+
+            if (myBloodGroup.isNotEmpty) {
+              NotificationService().startListening(
+                currentuser.email!,
+                myBloodGroup,
+                lastDonation, // NEW PARAMETER
+              );
+            }
           }
         });
   }
@@ -106,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             CircleAvatar(
                               backgroundColor: Colors.white24,
                               child: StreamBuilder<QuerySnapshot>(
-                                // 1. Listen for posts newer than lastCheckedTime and NOT from the current user
+                                // Listen for posts newer than lastCheckedTime and NOT from the current user
                                 stream: FirebaseFirestore.instance
                                     .collection('User Posts')
                                     .where(
@@ -115,7 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     )
                                     .snapshots(),
                                 builder: (context, snapshot) {
-                                  // 2. Count the docs (excluding our own)
+                                  // Count the docs (excluding our own)
                                   int unreadCount = 0;
                                   if (snapshot.hasData) {
                                     unreadCount = snapshot.data!.docs
@@ -127,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         .length;
                                   }
 
-                                  // 3. Wrap IconButton with Badge
+                                  // Wrap IconButton with Badge
                                   return Badge(
                                     isLabelVisible: unreadCount > 0,
                                     label: Text(unreadCount.toString()),
@@ -138,31 +152,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                         color: Colors.white,
                                       ),
                                       onPressed: () {
-                                        // 4. When clicked, reset the count to 0
+                                        // When clicked, reset the count to 0
                                         setState(() {
                                           lastCheckedTime = Timestamp.now();
                                         });
-
-                                        // Optional: Navigate to your requests/notifications page here
-                                        // Navigator.push(...);
                                       },
                                     ),
                                   );
                                 },
                               ),
                             ),
-                            /*CircleAvatar(
-                              backgroundColor: Colors.white24,
-                              //icon buttton(does nothing for now)
-                              child: IconButton(
-                                icon: Icon(
-                                  Icons.notifications,
-                                  color: Colors.white,
-                                ),
-                                onPressed: () {},
-                              ),
-                            ),*/
-                            // IconButton
                           ],
                         ),
                         SizedBox(height: 8),
@@ -278,7 +277,42 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
-                    SizedBox(height: 50),
+
+                    const SizedBox(height: 20),
+
+                    // TOTAL COUNTERS SECTION
+                    const Text(
+                      'Our Community Impact',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // 1. Total Users (Counts documents in "Users" collection)
+                        _buildStatCounter(
+                          label: "Total Users",
+                          collectionName: "Users",
+                          icon: Icons.people_alt_rounded,
+                          color: Colors.blue,
+                          isLifetime: false,
+                        ),
+
+                        // 2. Total Requests (Reads the permanent number from "GlobalStats")
+                        _buildStatCounter(
+                          label: "Lives Impacted",
+                          collectionName: "GlobalStats",
+                          icon: Icons.volunteer_activism,
+                          color: Colors.red,
+                          isLifetime: true,
+                        ), // This tells the widget to look at the document
+                      ],
+                    ),
+
+                    const SizedBox(height: 25),
 
                     //showing user email
                     Center(
@@ -295,21 +329,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      /*floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          
-        },
-        backgroundColor: Color(0xFFE53935),
-        icon: Icon(Icons.add, color: Colors.white),
-        label: Text(
-          'Donate Now',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),*/
     );
   }
 
@@ -384,6 +403,77 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatCounter({
+    required String label,
+    required String collectionName,
+    required IconData icon,
+    required Color color,
+    bool isLifetime = false, // Add this flag
+  }) {
+    // If isLifetime is true, we point to the single document.
+    // Otherwise, we point to the whole collection.
+    dynamic stream = isLifetime
+        ? FirebaseFirestore.instance
+              .collection(collectionName)
+              .doc('counters')
+              .snapshots()
+        : FirebaseFirestore.instance.collection(collectionName).snapshots();
+
+    return StreamBuilder(
+      stream: stream,
+      builder: (context, snapshot) {
+        String count = "0";
+
+        if (snapshot.hasData) {
+          if (isLifetime) {
+            // Logic for reading the single "Int64" field
+            var doc = snapshot.data as DocumentSnapshot;
+            if (doc.exists) {
+              count = (doc.get('total_requests') ?? 0).toString();
+            }
+          } else {
+            // Logic for counting collection length (Users)
+            var snap = snapshot.data as QuerySnapshot;
+            count = snap.docs.length.toString();
+          }
+        }
+
+        return Container(
+          width: MediaQuery.of(context).size.width * 0.42,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 28),
+              const SizedBox(height: 8),
+              Text(
+                count,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                label,
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

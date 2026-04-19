@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cse_project/components/textbox.dart';
+import 'package:cse_project/utills/donation_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -166,15 +167,6 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           SliverFillRemaining(
-            /*
-      backgroundColor: Colors.grey[300],
-      appBar: AppBar(
-        title: Text("Profile", style: TextStyle(color: Colors.white)),
-        centerTitle: true,
-        backgroundColor: Colors.grey[900],
-        foregroundColor: Colors.white,
-      ),
-      */
             child: StreamBuilder<DocumentSnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('Users')
@@ -188,22 +180,108 @@ class _ProfilePageState extends State<ProfilePage> {
                 if (snapshot.hasData) {
                   final userData =
                       snapshot.data!.data() as Map<String, dynamic>;
+
+                  final lastDonation =
+                      userData['last_donation_date'] as Timestamp?;
+                  final days = DonationHelper.daysSince(lastDonation);
+                  final progress = DonationHelper.getProgress(days);
+                  final bool canDonate = days >= 120;
+
                   return ListView(
                     children: [
                       const SizedBox(height: 30),
 
-                      //pic/logo
-                      /* Icon(Icons.person, size: 50),
+                      // ADDing THE PROGRESS BAR WIDGET
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 25.0,
+                          vertical: 10,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // Left Side: Title with Icon
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.history,
+                                      size: 18,
+                                      color: const Color.fromARGB(
+                                        255,
+                                        191,
+                                        0,
+                                        0,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      "Donation Status",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        color: const Color.fromARGB(
+                                          255,
+                                          223,
+                                          1,
+                                          1,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
 
-                      //user email
-                      Text(
-                        userEmail.email!,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey[700]),
+                                // Right Side: Dynamic Badge
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: canDonate
+                                        ? Colors.green.withOpacity(0.1)
+                                        : Colors.redAccent.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: canDonate
+                                          ? Colors.green
+                                          : Colors.redAccent,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    canDonate
+                                        ? "Ready to Donate"
+                                        : "${DonationHelper.daysRemaining(lastDonation)} Days Left",
+                                    style: TextStyle(
+                                      color: canDonate
+                                          ? Colors.green[700]
+                                          : Colors.redAccent[700],
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: LinearProgressIndicator(
+                                value: progress,
+                                minHeight: 12,
+                                backgroundColor: Colors.grey[300],
+                                color: canDonate
+                                    ? Colors.green
+                                    : Colors.redAccent,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
 
-                      const SizedBox(height: 30),
-                      */
                       Padding(
                         padding: const EdgeInsets.only(left: 20),
 

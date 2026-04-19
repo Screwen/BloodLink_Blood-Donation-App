@@ -5,6 +5,7 @@ import 'package:cse_project/components/Intrested_button.dart';
 import 'package:cse_project/components/dashboard_button.dart';
 import 'package:cse_project/components/delete_button.dart';
 import 'package:cse_project/pages/dashboard.dart';
+import 'package:cse_project/utills/donation_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -91,6 +92,28 @@ class _WallPostState extends State<WallPost> {
 
   //toggle intrested
   void toggleIntrested() async {
+    // 1. Fetch user data to check donation date
+    final userDoc = await FirebaseFirestore.instance
+        .collection("Users")
+        .doc(currentUser.email)
+        .get();
+
+    Timestamp? lastDonation = userDoc.data()?['last_donation_date'];
+    int days = DonationHelper.daysSince(lastDonation);
+
+    // 2. Block action if not eligible
+    if (days < 120 && !isIntrested) {
+      // !isIntrested means they are trying to click it
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "You must wait 120 days to donate again. ($days days passed)",
+          ),
+        ),
+      );
+      return; // STOP the function here
+    }
+
     setState(() {
       isIntrested = !isIntrested;
     });
@@ -100,14 +123,9 @@ class _WallPostState extends State<WallPost> {
         .collection("User Posts")
         .doc(widget.postID);
 
-    final userDoc = await FirebaseFirestore.instance
-        .collection("Users")
-        .doc(currentUser.email)
-        .get();
-
     final userData = {
       "email": currentUser.email,
-      "number": userDoc["number"] ?? "",
+      "number": userDoc.data()?["number"] ?? "",
     };
     if (isIntrested) {
       //if it is liked, add the users info to the 'intrestes' field of the post

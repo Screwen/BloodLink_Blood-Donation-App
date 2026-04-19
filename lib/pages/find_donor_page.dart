@@ -10,18 +10,21 @@ class Find_Donor extends StatefulWidget {
 }
 
 class _Find_DonorState extends State<Find_Donor> {
-
   @override
+  // get locations from firebase at first
   void initState() {
     super.initState();
     fetchLocation();
   }
 
+  //for eligible filter
+  bool showOnlyEligible = true;
+
   //for boodtype
   String? selectedBloodGroup;
   //for locaion
   String? selectedLocation;
-  
+
   //list of blood types
   final List<String> bloodTypes = [
     'A+',
@@ -47,7 +50,6 @@ class _Find_DonorState extends State<Find_Donor> {
       if (snapshot.exists && snapshot['List'] != null) {
         List<dynamic> loca_sion = snapshot['List'];
         setState(() {
-
           //add 'All' at first
           locations = ['All', ...loca_sion.map((e) => e.toString())];
           locations.sort();
@@ -58,18 +60,30 @@ class _Find_DonorState extends State<Find_Donor> {
     }
   }
 
-
   //query for filtering the users based n bloodtype and location
   Stream<QuerySnapshot> getfilteredquery() {
     Query query = FirebaseFirestore.instance.collection("Users");
 
+    // 1. Eligibility Filter (Conditional)
+    if (showOnlyEligible) {
+      DateTime deadline = DateTime.now().subtract(const Duration(days: 120));
+      Timestamp cutOffTimestamp = Timestamp.fromDate(deadline);
+      query = query.where(
+        "last_donation_date",
+        isLessThanOrEqualTo: cutOffTimestamp,
+      );
+    }
+
+    // 2. Blood Group Filter
     if (selectedBloodGroup != null) {
       query = query.where("blood_group", isEqualTo: selectedBloodGroup);
     }
 
+    // 3. Location Filter
     if (selectedLocation != null && selectedLocation != 'All') {
       query = query.where('location', isEqualTo: selectedLocation);
     }
+
     return query.snapshots();
   }
 
@@ -132,6 +146,33 @@ class _Find_DonorState extends State<Find_Donor> {
             padding: EdgeInsets.all(16),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
+                // Inside SliverChildListDelegate, before the Blood Group text
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      showOnlyEligible
+                          ? 'Showing Eligible Donors'
+                          : 'Showing All Users',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: showOnlyEligible
+                            ? Colors.green
+                            : Colors.blueGrey,
+                      ),
+                    ),
+                    Switch(
+                      value: showOnlyEligible,
+                      activeColor: Color(0xFFE53935),
+                      onChanged: (value) {
+                        setState(() {
+                          showOnlyEligible = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -254,7 +295,6 @@ class _Find_DonorState extends State<Find_Donor> {
                         }
                       },
                     ),
-                    
                   ],
                 ),
               ]),
@@ -265,7 +305,7 @@ class _Find_DonorState extends State<Find_Donor> {
     );
   }
 
-//display of user info
+  //display of user info
   Widget _buildDonorCard(Map<String, dynamic> donor) {
     return Card(
       elevation: 4,
@@ -353,14 +393,12 @@ class _Find_DonorState extends State<Find_Donor> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: TextButton(
-
                                   //funtiom for copying numbers
                                   onPressed: () {
                                     Clipboard.setData(
                                       ClipboardData(text: donor["number"]),
                                     );
                                     Navigator.of(context).pop(); // close dialog
-
 
                                     //show dialog, that number us copied
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -392,7 +430,7 @@ class _Find_DonorState extends State<Find_Donor> {
                       foregroundColor: Colors.white,
                       padding: EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadiusGeometry.circular(12),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
