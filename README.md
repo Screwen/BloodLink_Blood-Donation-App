@@ -15,7 +15,7 @@ BloodSync is a mobile application developed to streamline the blood donation pro
 ### Binary Packages
 To begin your journey as a donor or requester, navigate to the Releases section and select the package for your device:
 
-* **Android:** [📥 Download BloodSync_v1.0.0.apk](https://github.com/Screwen/BloodSync_Blood-Donation-App/releases/download/v1.1/app-release.apk) 📱
+* **Android:** [📥 Download BloodSync_v1.2.apk](https://github.com/Screwen/BloodSync_Blood-Donation-App/releases/download/v1.2/BloodSync.apk) 📱
 
 
 ### Execution Steps
